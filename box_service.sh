@@ -8,7 +8,13 @@
     if [ -f "/data/adb/box/scripts/start.sh" ]; then
         chmod 755 /data/adb/box/scripts/*
         /data/adb/box/scripts/start.sh
+        SCRIPTS_DIR="/data/adb/box/scripts"
+
+        while [ ! -f /data/misc/net/rt_tables ]; do
+            sleep 3
+        done
+        inotifyd ${SCRIPTS_DIR}/ctr.inotify /data/misc/net/rt_tables > /dev/null 2>&1 &
     else
-        echo "File '/data/adb/box/scripts/start.sh' not found"
+        echo "未找到文件 '/data/adb/box/scripts/start.sh'"
     fi
 )&

@@ -1,69 +1,83 @@
-name: release
+name: 发布版本
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release Tag'
+        description: '发布标签'
         required: true
       branch:
-        description: 'Push Changes'
+        description: '目标分支（用于版本文件更新）'
         required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4.1.0
-      - name: Get Version
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.PAT }}
+          
+      - name: 获取版本
         id: get_version
         run: |
           echo "date=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
-      - name: Update update.json and module.prop
+      - name: 更新update.json和module.prop
         run: |
           echo '{
             "version": "${{ github.event.inputs.tag }}",
             "versionCode": "${{ steps.get_version.outputs.date }}",
-            "zipUrl": "https://github.com/taamarin/box_for_magisk/releases/download/${{ github.event.inputs.tag }}/box_for_root-${{ github.event.inputs.tag }}.zip",
-            "changelog": "https://github.com/taamarin/box_for_magisk/raw/master/CHANGELOG.md"
+            "zipUrl": "https://github.com/boxproxy/box/releases/download/${{ github.event.inputs.tag }}/box_${{ github.event.inputs.tag }}.zip",
+            "changelog": "https://github.com/boxproxy/box/raw/master/CHANGELOG.md"
           }' > update.json
 
           sed -i "s/$(grep -oP 'version=\K[^ ]+' module.prop)/${{ github.event.inputs.tag }}/g" module.prop
           sed -i "s/$(grep -oP 'versionCode=\K[^ ]+' module.prop)/$(date +%Y%m%d)/g" module.prop
-
-      - name: Commit and push changes
+          
+      - name: 提交更新的文件
         run: |
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
           git add update.json module.prop
-          git commit -m "${{ github.event.inputs.tag }}"
-          git push -f origin "${{github.event.inputs.branch}}"
+          
+          # 检查是否有变更需要提交
+          if git diff --staged --quiet; then
+            echo "没有文件变更，跳过提交步骤"
+          else
+            git commit -m "发布 ${{ github.event.inputs.tag }}"
+            git push origin ${{ github.event.inputs.branch }}
+          fi
  
-      - name: run build.sh
+      - name: 运行build.sh
         run: |
           sh build.sh
+          ls -la
+          
+      - name: 设置输出文件名
+        id: set_filename
+        run: |
+          if ls box_*.zip 1> /dev/null 2>&1; then
+            echo "filename_pattern=box_*.zip" >> "$GITHUB_OUTPUT"
+          elif ls box-*.zip 1> /dev/null 2>&1; then
+            echo "filename_pattern=box-*.zip" >> "$GITHUB_OUTPUT"
+          elif ls box_${{ github.event.inputs.tag }}.zip 1> /dev/null 2>&1; then
+            echo "filename_pattern=box_${{ github.event.inputs.tag }}.zip" >> "$GITHUB_OUTPUT"
+          elif ls box-${{ github.event.inputs.tag }}.zip 1> /dev/null 2>&1; then
+            echo "filename_pattern=box-${{ github.event.inputs.tag }}.zip" >> "$GITHUB_OUTPUT"
+          else
+            echo "filename_pattern=*.zip" >> "$GITHUB_OUTPUT"
+          fi
+          echo "找到匹配的文件模式: ${{ steps.set_filename.outputs.filename_pattern }}"
 
-      - name: Create GitHub Release
+      - name: 创建GitHub发布
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.inputs.tag }}
-          files: box_for_root-v*.zip
+          files: ${{ steps.set_filename.outputs.filename_pattern }}
           generate_release_notes: true
+          token: ${{ secrets.PAT }}
 
-      - name: upload to telegram
-        if: ${{  success() }}
-        env:
-          CHAT_ID: "-1001597117128"
-          MESSAGE_THREAD_ID: "282263"
-          API_ID: ${{ secrets.API_ID }}
-          API_HASH: ${{ secrets.API_HASH }}
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: |
-          if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
-            export VERSION=$(git rev-parse --short HEAD)
-            export COMMIT=$(git log --oneline -n 10 --no-decorate | sed 's/^[0-9a-f]* //' | sed 's/^/— /')
-            FILE=$(find -name "*.zip")
-            pip3 install telethon==1.31.1
-            python3 $GITHUB_WORKSPACE/.github/taamarinbot.py $FILE
-          fi

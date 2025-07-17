@@ -4,6 +4,10 @@ scripts_dir="${0%/*}"
 file_settings="/data/adb/box/settings.ini"
 moddir="/data/adb/modules/box_for_root"
 
+if [ -f "$file_settings" ]; then
+    . "$file_settings"
+fi
+
 # busybox Magisk/KSU/Apatch
 busybox="/data/adb/magisk/busybox"
 [ -f "/data/adb/ksu/bin/busybox" ] && busybox="/data/adb/ksu/bin/busybox"
@@ -17,13 +21,22 @@ refresh_box() {
 }
 
 start_service() {
+  if [ -f "$file_settings" ]; then
+    . "$file_settings"
+  fi
+  
+  if [ "$boot_auto_start" = "false" ]; then
+    echo "开机自启已禁用，跳过启动核心服务。"
+    return 0
+  fi
+  
   if [ ! -f "${moddir}/disable" ]; then
     "${scripts_dir}/box.service" start >> "/dev/null" 2>&1
   fi
 }
 
 enable_iptables() {
-  PIDS=("clash" "xray" "sing-box" "v2fly")
+  PIDS=("mihomo" "xray" "sing-box" "v2fly")
   PID=""
   i=0
   while [ -z "$PID" ] && [ "$i" -lt "${#PIDS[@]}" ]; do

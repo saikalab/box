@@ -1,0 +1,50 @@
+#!/system/bin/sh
+
+PID_FILE="/data/adb/box/run/box.pid"
+
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+    if [ -n "$PID" ] && [ -d "/proc/$PID" ]; then
+        # Get Memory Usage (VmRSS) in KB from /proc/[pid]/status
+        MEM_KB=$(grep 'VmRSS:' /proc/$PID/status | awk '{print $2}')
+        
+        # Get CPU Usage
+        # Read initial values
+        UTIME_BEFORE=$(awk '{print $14}' /proc/$PID/stat)
+        STIME_BEFORE=$(awk '{print $15}' /proc/$PID/stat)
+        UPTIME_BEFORE=$(cut -d' ' -f1 /proc/uptime)
+        
+        # Wait a moment
+        sleep 0.5
+        
+        # Read final values
+        UTIME_AFTER=$(awk '{print $14}' /proc/$PID/stat)
+        STIME_AFTER=$(awk '{print $15}' /proc/$PID/stat)
+        UPTIME_AFTER=$(cut -d' ' -f1 /proc/uptime)
+
+        # Calculate CPU
+        UTIME_DELTA=$((UTIME_AFTER - UTIME_BEFORE))
+        STIME_DELTA=$((STIME_AFTER - STIME_BEFORE))
+        UPTIME_DELTA=$(echo "$UPTIME_AFTER - $UPTIME_BEFORE" | bc)
+        
+        TOTAL_PROCESS_TIME_DELTA=$((UTIME_DELTA + STIME_DELTA))
+        
+        # hertz is usually 100 on android
+        CPU_USAGE=$(echo "scale=2; ($TOTAL_PROCESS_TIME_DELTA / 100) / $UPTIME_DELTA * 100" | bc | awk '{printf "%.0f", $1}')
+        
+        # Get Running Core from /proc/[pid]/stat (39th field, 0-indexed 38)
+        CORE=$(awk '{print $39}' /proc/$PID/stat)
+
+        echo "MEM:${MEM_KB}"
+        echo "CPU:${CPU_USAGE}%"
+        echo "CORE:${CORE}"
+    else
+        echo "MEM:-MB"
+        echo "CPU:-%"
+        echo "CORE:-"
+    fi
+else
+    echo "MEM:-MB"
+    echo "CPU:-%"
+    echo "CORE:-"
+fi 

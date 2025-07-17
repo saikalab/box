@@ -1,5 +1,10 @@
 #!/system/bin/sh
 
+# 检查模块是否已禁用
+if [ -f "/data/adb/modules/box_for_root/disable" ]; then
+    exit 0
+fi
+
 events=$1
 # monitor_dir=$2
 # monitor_file=$3
@@ -25,22 +30,23 @@ logs="/data/adb/box/run"
 rules_add() {
   date > "${logs}/net.log"
   iptables -t mangle -F LOCAL_IP_V4
-  ip -4 a | busybox awk '/inet/ {print $2}' | grep -vE "^127.0.0.1" | while read -r local_ipv4 ; do
+  ip -4 a | busybox awk '/inet/ {print $2}' | grep -vE "^127\.0\.0\.1" | while read -r local_ipv4 ; do
     ${iptables} -t mangle -A LOCAL_IP_V4 -d $local_ipv4 -j ACCEPT
     rv1=$?
     ${iptables} -t nat -A LOCAL_IP_V4 -d $local_ipv4 -j ACCEPT
     rv2=$?
-    ( [ $rv1 = "0" ] || [ $rv2 = "0" ] ) && echo "[Info]: local ip is $local_ipv4, anti-loopback rule has been inserted" >> ${logs}/net.log 2>> ${logs}/net_error.log
+    ( [ $rv1 = "0" ] || [ $rv2 = "0" ] ) && echo "[信息]: 本地IP $local_ipv4，防环回规则已插入" >> ${logs}/net.log 2>> ${logs}/net_error.log
   done
 
   ip6tables -t mangle -F LOCAL_IP_V6
   ip -6 a | busybox awk '/inet6/ {print $2}' | grep -vE "^fe80|^::1|^fd00" | while read -r local_ipv6 ; do
     ${ip6tables} -t mangle -A LOCAL_IP_V6 -d $local_ipv6 -j ACCEPT
-    [ $? = "0" ] && echo "[Info]: local ip is $local_ipv6, anti-loopback rule has been inserted" >> ${logs}/net.log 2>> ${logs}/net_error.log
+    [ $? = "0" ] && echo "[信息]: 本地IP $local_ipv6，防环回规则已插入" >> ${logs}/net.log 2>> ${logs}/net_error.log
   done
 }
 
 if [ "$events" = "w" ]; then
+  # 只有 box.pid 存在时才执行原有规则
   if [ -f "/data/adb/box/run/box.pid" ]; then
     rules_add
   fi
