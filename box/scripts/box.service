@@ -11,11 +11,11 @@ find_packages_uid() {
   # --- 1. 初始化，创建覆盖写入的日志文件 ---
   echo "--- Box UID/GID 查询日志 ---" > "${uid_log}"
   echo "$(date)" >> "${uid_log}"
-  echo "代理模式: ${proxy_mode}" >> "${uid_log}"
+  echo "[Info] 代理模式: ${proxy_mode}" >> "${uid_log}"
   echo "" >> "${uid_log}"
   echo "--- 从 package.list.cfg 读取的列表 ---" >> "${uid_log}"
-  echo "统一应用列表: ${packages_list_multiuser[*]}" >> "${uid_log}"
-  echo "GID 列表: ${gid_list[*]}" >> "${uid_log}"
+  echo "[Debug] 统一应用列表: ${packages_list_multiuser[*]}" >> "${uid_log}"
+  echo "[Debug] GID 列表: ${gid_list[*]}" >> "${uid_log}"
   echo "----------------------------------------" >> "${uid_log}"
   echo "" >> "${uid_log}"
 
@@ -35,9 +35,9 @@ find_packages_uid() {
     if [ -n "${base_uid}" ]; then
       local multiuser_uid=$((base_uid + prefix * 100000))
       echo "${multiuser_uid}" >> "${uid_list}"
-      echo "[成功] 用户 ${prefix} 应用: ${package} -> ${multiuser_uid}" >> "${uid_log}"
+      echo "[Info] Success: 用户 ${prefix} 应用: ${package} -> ${multiuser_uid}" >> "${uid_log}"
     else
-      echo "[失败] 用户 ${prefix} 应用: ${package} -> 未找到" >> "${uid_log}"
+      echo "[Warning] Failure: 用户 ${prefix} 应用: ${package} -> 未找到" >> "${uid_log}"
     fi
   done
 
@@ -51,8 +51,8 @@ find_packages_uid() {
 
   echo "" >> "${uid_log}"
   echo "--- 用于 iptables 的最终列表 ---" >> "${uid_log}"
-  echo "最终 GID 列表: ${gid_list[*]}" >> "${uid_log}"
-  echo "最终 UID 列表 (来自 ${uid_list}):" >> "${uid_log}"
+  echo "[Debug] 最终 GID 列表: ${gid_list[*]}" >> "${uid_log}"
+  echo "[Debug] 最终 UID 列表 (来自 ${uid_list}):" >> "${uid_log}"
   # 使用 cat 而不是 echo，以防列表过长
   cat "${uid_list}" >> "${uid_log}"
   echo "---------------------------------" >> "${uid_log}"
@@ -66,14 +66,14 @@ log_service_results() {
     echo "" >> "${box_run}/uid.log"
     echo "--- ${core_name} 服务处理结果 ---" >> "${box_run}/uid.log"
     echo "时间: $(date)" >> "${box_run}/uid.log"
-    echo "操作: 更新TUN模式UID列表" >> "${box_run}/uid.log"
+    echo "[Info] 操作: 更新TUN模式UID列表" >> "${box_run}/uid.log"
     
     if [ -n "$uids" ]; then
-        echo "模式: ${proxy_mode_type}" >> "${box_run}/uid.log"
-        echo "应用的 UIDs: ${uids}" >> "${box_run}/uid.log"
+        echo "[Info] 模式: ${proxy_mode_type}" >> "${box_run}/uid.log"
+        echo "[Debug] 应用的 UIDs: ${uids}" >> "${box_run}/uid.log"
     else
-        echo "模式: ${proxy_mode_type}" >> "${box_run}/uid.log"
-        echo "应用的 UIDs: (无)" >> "${box_run}/uid.log"
+        echo "[Info] 模式: ${proxy_mode_type}" >> "${box_run}/uid.log"
+        echo "[Debug] 应用的 UIDs: (无)" >> "${box_run}/uid.log"
     fi
     echo "-----------------------------" >> "${box_run}/uid.log"
 }

@@ -726,27 +726,27 @@ log_iptables_results() {
   echo "" >> "${box_run}/uid.log" # Append a newline for spacing
   echo "--- iptables 处理结果 ---" >> "${box_run}/uid.log"
   echo "时间: $(date)" >> "${box_run}/uid.log"
-  echo "操作: 应用规则" >> "${box_run}/uid.log"
-  echo "网络模式: ${network_mode}" >> "${box_run}/uid.log"
-  echo "代理模式: ${proxy_mode}" >> "${box_run}/uid.log"
+  echo "[Info] 操作: 应用规则" >> "${box_run}/uid.log"
+  echo "[Info] 网络模式: ${network_mode}" >> "${box_run}/uid.log"
+  echo "[Info] 代理模式: ${proxy_mode}" >> "${box_run}/uid.log"
   
   local applied_uids=$(cat "${uid_list}" 2>/dev/null | tr '\n' ' ')
   
   if [ -n "$applied_uids" ]; then
-    echo "应用的 UIDs: $applied_uids" >> "${box_run}/uid.log"
+    echo "[Debug] 应用的 UIDs: $applied_uids" >> "${box_run}/uid.log"
   else
     # Distinguish between empty list in whitelist mode (all apps) vs blacklist mode (no apps)
     if [[ "$proxy_mode" == "whitelist" || "$proxy_mode" == "white" ]]; then
-       echo "应用的 UIDs: (列表为空, 代理所有应用)" >> "${box_run}/uid.log"
+       echo "[Debug] 应用的 UIDs: (列表为空, 代理所有应用)" >> "${box_run}/uid.log"
     else
-       echo "应用的 UIDs: (列表为空, 不代理任何应用)" >> "${box_run}/uid.log"
+       echo "[Debug] 应用的 UIDs: (列表为空, 不代理任何应用)" >> "${box_run}/uid.log"
     fi
   fi
 
   if [ -n "${gid_list[*]}" ]; then
-    echo "应用的 GIDs: ${gid_list[*]}" >> "${box_run}/uid.log"
+    echo "[Debug] 应用的 GIDs: ${gid_list[*]}" >> "${box_run}/uid.log"
   else
-    echo "应用的 GIDs: (无)" >> "${box_run}/uid.log"
+    echo "[Debug] 应用的 GIDs: (无)" >> "${box_run}/uid.log"
   fi
   echo "--------------------------" >> "${box_run}/uid.log"
 }
@@ -755,7 +755,7 @@ log_iptables_cleanup() {
   echo "" >> "${box_run}/uid.log"
   echo "--- iptables 处理结果 ---" >> "${box_run}/uid.log"
   echo "时间: $(date)" >> "${box_run}/uid.log"
-  echo "操作: 清理规则" >> "${box_run}/uid.log"
+  echo "[Info] 操作: 清理规则" >> "${box_run}/uid.log"
   echo "--------------------------" >> "${box_run}/uid.log"
 }
 

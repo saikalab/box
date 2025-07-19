@@ -1,7 +1,8 @@
 pr: &pr
-  proxies: [主要节点, 故障转移_香港, 故障转移_台湾, 故障转移_新加坡, 故障转移_日本, 故障转移_美国, 负载均衡, 自动选择, 手动切换, 国内直连]
+  proxies: [主要节点, 手动切换, 自动选择, 故障转移组, 自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国, 国内直连, REJECT]
 
 p: &p
+  type: http
   interval: 86400
   health-check:
     enable: true
@@ -13,38 +14,13 @@ p: &p
 proxy-anchor:
   use: &use
     use: [proxy1]
-
-  balance: &balance
-    type: load-balance
-    <<: *use
-
-  fallback: &fallback
-    type: fallback
-    <<: *use
-
-  fallback_hk: &fallback_hk
-    <<: *fallback
-    filter: "(?i)(香港|hong kong|hk|hksar)"
-
-  fallback_tw: &fallback_tw
-    <<: *fallback
-    filter: "(?i)(台湾|taiwan|tw|twn|台北|taipei|高雄|kaohsiung|台中|taichung|新北|new taipei)"
-
-  fallback_sg: &fallback_sg
-    <<: *fallback
-    filter: "(?i)(新加坡|狮城|singapore|sg|sgp)"
-
-  fallback_jp: &fallback_jp
-    <<: *fallback
-    filter: "(?i)(日本|japan|jpn|jp|tokyo|大阪|osaka|京都|kyoto|福冈|fukuoka|札幌|sapporo|名古屋|nagoya)"
-
-  fallback_us: &fallback_us
-    <<: *fallback
-    filter: "(?i)(美国|united states|usa|us|america|加州|california|纽约|new york|德克萨斯|texas|佛罗里达|florida|华盛顿|washington|芝加哥|chicago|洛杉矶|los angeles|旧金山|san francisco)"
   
   select_use: &select_use
     type: select
     <<: *use
+
+  free_use: &free_use
+    <<: *free
 
   select_proxy: &select_proxy
     type: select
@@ -56,9 +32,13 @@ proxy-anchor:
 
 proxy-providers:
   proxy1:
-    type: http
+    <<: *p
     path: ./proxy_provider/proxy1.yaml
-    url: "http://127.0.0.1:3000/download/collection/air?target=Clash"
+    url: "http://127.0.0.1:3000/download/collection/air?target=ClashMeta"
+  proxy2:
+    <<: *p
+    path: ./proxy_provider/proxy2.yaml
+    url: "http://127.0.0.1:3000/download/collection/free?target=ClashMeta"
 
 mixed-port: 7890
 redir-port: 9797
@@ -69,12 +49,11 @@ ipv6: true
 allow-lan: true
 unified-delay: true
 tcp-concurrent: true
-enable-process: true
 log-level: error
 find-process-mode: always
 global-client-fingerprint: random
 external-controller: 0.0.0.0:9999
-secret: "misaki"
+secret: ""
 external-ui: ./dashboard
 external-ui-url: https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip
 
@@ -97,6 +76,7 @@ sniffer:
   skip-domain:
     - "+.douyinpic.com"
     - "+.douyincdn.com"
+    - "+.amemv.com"
 
 tun:
   enable: false
@@ -114,30 +94,39 @@ dns:
   prefer-h3: true
   ipv6: true
   listen: 0.0.0.0:1053
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
   enhanced-mode: fake-ip
-  fake-ip-range: 28.0.0.1/8
+  fake-ip-range: 192.18.0.0/15
   fake-ip-filter:
     - "rule-set:Fake-IP-Filter"
-  direct-nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
+  proxy-server-nameserver:
+    - quic://223.5.5.5:853
+    - https://1.12.12.12/dns-query
   nameserver-policy:
+    "rule-set:cn_domain":
+      - quic://223.5.5.5:853
+      - https://1.12.12.12/dns-query
+    "rule-set:private_domain":
+      - system
     "rule-set:awavenue":
-      - rcode://refused
-  fallback:
-    - https://dns.google/dns-query#DNS
-    - https://cloudflare-dns.com/dns-query#DNS
+      - rcode://success
+  nameserver:
+    - https://1.1.1.1/dns-query#DNS
+    - https://8.8.8.8/dns-query#DNS
 
 proxies:
   - {name: DNS_Hijack, type: dns}
 
 proxy-groups:
+  - name: 主要节点
+    type: select
+    proxies: [手动切换, 自动选择, 故障转移组, 自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国, 国内直连, REJECT]
+    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Star.png
+
+  - name: 故障转移组
+    type: fallback
+    proxies: [自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国]
+    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Back.png
+
   - name: EMBY
     <<: *select_proxy
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Emby.png
@@ -196,39 +185,34 @@ proxy-groups:
     <<: *select_proxy
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Final.png
 
-  - name: 主要节点
-    type: select
-    proxies: [手动切换, 自动选择, 故障转移_香港, 故障转移_台湾, 故障转移_新加坡, 故障转移_日本, 故障转移_美国, 负载均衡, 国内直连, REJECT]
-    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Star.png
-
   - name: 手动切换
     <<: *select_use
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Rocket.png
 
-  - name: 故障转移_香港
-    <<: *fallback_hk
+  - name: 自动选择_香港
+    <<: *auto_use
+    filter: "(?i)(香港|hong kong|hk|hksar)"
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Hong_Kong.png
 
-  - name: 故障转移_台湾
-    <<: *fallback_tw
+  - name: 自动选择_台湾
+    <<: *auto_use
+    filter: "(?i)(台湾|taiwan|tw|twn|台北|taipei|高雄|kaohsiung|台中|taichung|新北|new taipei)"
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Taiwan.png
 
-  - name: 故障转移_新加坡
-    <<: *fallback_sg
+  - name: 自动选择_新加坡
+    <<: *auto_use
+    filter: "(?i)(新加坡|狮城|singapore|sg|sgp)"
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Singapore.png
 
-  - name: 故障转移_日本
-    <<: *fallback_jp
+  - name: 自动选择_日本
+    <<: *auto_use
+    filter: "(?i)(日本|japan|jpn|jp|tokyo|大阪|osaka|京都|kyoto|福冈|fukuoka|札幌|sapporo|名古屋|nagoya)"
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Japan.png
 
-  - name: 故障转移_美国
-    <<: *fallback_us
+  - name: 自动选择_美国
+    <<: *auto_use
+    filter: "(?i)(美国|united states|usa|us|america|加州|california|纽约|new york|德克萨斯|texas|佛罗里达|florida|华盛顿|washington|芝加哥|chicago|洛杉矶|los angeles|旧金山|san francisco)"
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/United_States.png
-
-  - name: 负载均衡
-    <<: *balance
-    strategy: round-robin
-    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Round_Robin_1.png
 
   - name: 自动选择
     <<: *auto_use
@@ -325,7 +309,8 @@ rule-providers:
   
 rules:
   - DST-PORT,53,DNS_Hijack
-  - DST-PORT,853,DNS
+  - DST-PORT,5228,FCM推送
+  - DOMAIN-REGEX,^.*mtalk.google.com,FCM推送
   - DOMAIN-SUFFIX,linux.do,国外代理
   - DOMAIN-SUFFIX,akikawa.asia,国内直连
   - DOMAIN-SUFFIX,omarea.com,国外代理
@@ -336,7 +321,6 @@ rules:
   - OR,((RULE-SET,telegram_ip,no-resolve),(RULE-SET,telegram_domain)),电报消息
   - RULE-SET,github_domain,GITHUB
   - RULE-SET,youtube_domain,油管视频
-  - OR,((DOMAIN-REGEX,^.*mtalk.google.com),(DST-PORT,5228,FCM推送)),FCM推送
   - OR,((RULE-SET,google_ip,no-resolve),(RULE-SET,google_domain)),谷歌服务
   - RULE-SET,microsoft_domain,微软服务
   - RULE-SET,awavenue,广告拦截
