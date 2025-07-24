@@ -431,6 +431,31 @@ upkernel() {
   
   local file_kernel="${core_to_update}-${arch}"
   case "${core_to_update}" in
+    "mihomo_smart")
+      log Info "正在更新 mihomo-smart 核心 (来自 vernesong/mihomo)"
+      local arch_smart
+      case $(uname -m) in
+        "aarch64") arch_smart="arm64-v8" ;;
+        *) log Error "mihomo-smart 当前仅支持 aarch64 架构"; return 1 ;;
+      esac
+
+      local release_page_url="https://github.com/vernesong/mihomo/releases/expanded_assets/Prerelease-Alpha"
+      [ "${use_ghproxy}" = "true" ] && release_page_url="${url_ghproxy}/${release_page_url}"
+      
+      # 从发布页面动态解析 smart-xxxxxxx 版本
+      local smart_version_tag=$($rev1 "${release_page_url}" | busybox grep -oE "smart-[a-f0-9]+" | head -1)
+
+      if [ -z "$smart_version_tag" ]; then
+        log Error "获取 mihomo-smart 最新版本标签失败"
+        return 1
+      fi
+
+      local download_link="https://github.com/vernesong/mihomo/releases/download/Prerelease-Alpha/mihomo-android-${arch_smart}-alpha-${smart_version_tag}.gz"
+      local file_kernel="${core_to_update}-${arch_smart}"
+      
+      log Debug "下载 ${download_link}"
+      upfile "${box_dir}/${file_kernel}.gz" "${download_link}" && xkernel "$core_to_update" "" "" "" "$file_kernel"
+      ;;
     "sing-box")
       api_url="https://api.github.com/repos/SagerNet/sing-box/releases"
       url_down="https://github.com/SagerNet/sing-box/releases"
@@ -540,20 +565,30 @@ xkernel() {
   bin_name=$core_to_process
 
   case "${core_to_process}" in
-    "mihomo")
+    "mihomo"|"mihomo_smart")
       gunzip_command="gunzip"
       if ! command -v gunzip >/dev/null 2>&1; then
         gunzip_command="busybox gunzip"
       fi
 
-      if ${gunzip_command} -f "${box_dir}/${file_kernel}.gz" >&2 && mv "${box_dir}/${file_kernel}" "${bin_dir}/mihomo"; then
-        log Info "mihomo 已成功更新"
+      # 'mihomo_smart' 是 'mihomo' 的一个变体，最终二进制文件都应命名为 'mihomo'
+      local target_bin_name="mihomo"
+
+      if ${gunzip_command} -f "${box_dir}/${file_kernel}.gz" >&2 && mv "${box_dir}/${file_kernel}" "${bin_dir}/${target_bin_name}"; then
+        log Info "${target_bin_name} 已成功更新 (来自: ${core_to_process})"
       else
-        log Error "解压或移动 mihomo 核心失败."
+        log Error "解压或移动 ${target_bin_name} 核心失败."
+        bin_name=$original_bin_name # 恢复原始的bin_name
+        return 1
       fi
       
       if [ -f "${box_pid}" ]; then
-        restart_box "$core_to_process"
+        # 如果当前运行的就是 mihomo，则重启
+        if [ "$original_bin_name" = "mihomo" ]; then
+          restart_box "$target_bin_name"
+        else
+          log Debug "${target_bin_name} 已更新，但当前运行的是 ${original_bin_name}，无需重启。"
+        fi
       else
         log Debug "${core_to_process} 无需重启."
       fi
@@ -966,5 +1001,6 @@ case "$1" in
   *)
     log Error "$0 $1 未找到"
     log Info "用法: $0 {check|memcg|cpuset|blkio|geosub|geox|subs|upkernel [name]|upkernels [name...]|upgeox_all|upxui|upyq|upcurl|reload|webroot|bond0|bond1|all}"
+    log Info "upkernel 支持的核心: sing-box, mihomo, mihomo_smart, xray, v2fly, hysteria"
     ;;
 esac

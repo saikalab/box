@@ -899,7 +899,10 @@ case "$1" in
   restart)
     "${scripts_dir}/box.iptables" disable && stop_box
     sleep 0.2
-    start_box && "${scripts_dir}/box.iptables" renew
+    if start_box; then
+      "${scripts_dir}/box.iptables" renew
+      $scripts_dir/box.tool webroot >/dev/null 2>&1
+    fi
     ;;
   status)
     # 检查服务是否在运行

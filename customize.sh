@@ -164,6 +164,9 @@ if handle_choice "是否需要下载内核或数据文件？" "是，进行下�
         if handle_choice "  - 下载 mihomo 内核？" "下载" "跳过"; then
             COMPONENTS_TO_DOWNLOAD="$COMPONENTS_TO_DOWNLOAD mihomo"
         fi
+        if handle_choice "  - 下载 mihomo_smart (带Smart策略组) 内核？（与mihomo冲突，请勿同时下载）" "下载" "跳过"; then
+            COMPONENTS_TO_DOWNLOAD="$COMPONENTS_TO_DOWNLOAD mihomo_smart"
+        fi
         if handle_choice "  - 下载 xray 内核？" "下载" "跳过"; then
             COMPONENTS_TO_DOWNLOAD="$COMPONENTS_TO_DOWNLOAD xray"
         fi

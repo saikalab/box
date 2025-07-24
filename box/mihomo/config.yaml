@@ -19,9 +19,6 @@ proxy-anchor:
     type: select
     <<: *use
 
-  free_use: &free_use
-    <<: *free
-
   select_proxy: &select_proxy
     type: select
     <<: *pr
@@ -34,11 +31,7 @@ proxy-providers:
   proxy1:
     <<: *p
     path: ./proxy_provider/proxy1.yaml
-    url: "http://127.0.0.1:3000/download/collection/air?target=ClashMeta"
-  proxy2:
-    <<: *p
-    path: ./proxy_provider/proxy2.yaml
-    url: "http://127.0.0.1:3000/download/collection/free?target=ClashMeta"
+    url: "此处填写订阅链接"
 
 mixed-port: 7890
 redir-port: 9797
@@ -52,7 +45,7 @@ tcp-concurrent: true
 log-level: error
 find-process-mode: always
 global-client-fingerprint: random
-external-controller: 0.0.0.0:9999
+external-controller: 0.0.0.0:9090
 secret: ""
 external-ui: ./dashboard
 external-ui-url: https://github.com/Zephyruso/zashboard/releases/latest/download/dist.zip
@@ -68,7 +61,6 @@ sniffer:
   sniff:
     HTTP:
       ports: [80, 8080-8880]
-      override-destination: false
     TLS:
       ports: [443, 8443]
     QUIC:
@@ -99,38 +91,24 @@ dns:
   fake-ip-filter:
     - "rule-set:Fake-IP-Filter"
   proxy-server-nameserver:
-    - quic://223.5.5.5:853
-    - https://1.12.12.12/dns-query
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
   nameserver-policy:
     "rule-set:cn_domain":
-      - quic://223.5.5.5:853
-      - https://1.12.12.12/dns-query
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
     "rule-set:private_domain":
       - system
     "rule-set:awavenue":
       - rcode://success
   nameserver:
-    - https://1.1.1.1/dns-query#DNS
-    - https://8.8.8.8/dns-query#DNS
+    - https://cloudflare-dns.com/dns-query#DNS
+    - https://dns.google/dns-query#DNS
 
 proxies:
   - {name: DNS_Hijack, type: dns}
 
 proxy-groups:
-  - name: 主要节点
-    type: select
-    proxies: [手动切换, 自动选择, 故障转移组, 自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国, 国内直连, REJECT]
-    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Star.png
-
-  - name: 故障转移组
-    type: fallback
-    proxies: [自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国]
-    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Back.png
-
-  - name: EMBY
-    <<: *select_proxy
-    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Emby.png
-
   - name: Ai
     <<: *select_proxy
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/AI.png
@@ -185,9 +163,19 @@ proxy-groups:
     <<: *select_proxy
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Final.png
 
+  - name: 主要节点
+    type: select
+    proxies: [手动切换, 自动选择, 故障转移组, 自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国, 国内直连, REJECT]
+    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Star.png
+
   - name: 手动切换
     <<: *select_use
     icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Rocket.png
+
+  - name: 故障转移组
+    type: fallback
+    proxies: [自动选择_香港, 自动选择_台湾, 自动选择_新加坡, 自动选择_日本, 自动选择_美国]
+    icon: https://gitlab.com/akikawa/backup/-/raw/main/IconSet/Color/Back.png
 
   - name: 自动选择_香港
     <<: *auto_use
@@ -238,10 +226,6 @@ rule-anchor:
     interval: 86400
 
 rule-providers:
-  Emby:
-    <<: *classical
-    path: ./rule_provider/Emby.yaml
-    url: "https://gist.githubusercontent.com/misak10/5e622ae9df8c4582f64de29d12203280/raw/emby.yaml"
   Ai:
     <<: *domain
     path: ./rule_provider/ai.mrs
@@ -315,7 +299,6 @@ rules:
   - DOMAIN-SUFFIX,akikawa.asia,国内直连
   - DOMAIN-SUFFIX,omarea.com,国外代理
   - DOMAIN-SUFFIX,parkson-market.org,国内直连
-  - RULE-SET,Emby,EMBY
   - RULE-SET,Ai,Ai
   - OR,((RULE-SET,netflix_ip,no-resolve),(RULE-SET,netflix_domain)),奈飞视频
   - OR,((RULE-SET,telegram_ip,no-resolve),(RULE-SET,telegram_domain)),电报消息
