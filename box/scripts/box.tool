@@ -562,6 +562,12 @@ xkernel() {
   local file_kernel="$5"
   
   local original_bin_name=$bin_name
+  # 确定最终的二进制文件名。mihomo_smart 只是一个别名，实际更新的是 mihomo。
+  local target_bin_name="$core_to_process"
+  if [ "$core_to_process" = "mihomo_smart" ]; then
+    target_bin_name="mihomo"
+  fi
+  
   bin_name=$core_to_process
 
   case "${core_to_process}" in
@@ -571,26 +577,12 @@ xkernel() {
         gunzip_command="busybox gunzip"
       fi
 
-      # 'mihomo_smart' 是 'mihomo' 的一个变体，最终二进制文件都应命名为 'mihomo'
-      local target_bin_name="mihomo"
-
       if ${gunzip_command} -f "${box_dir}/${file_kernel}.gz" >&2 && mv "${box_dir}/${file_kernel}" "${bin_dir}/${target_bin_name}"; then
         log Info "${target_bin_name} 已成功更新 (来自: ${core_to_process})"
       else
         log Error "解压或移动 ${target_bin_name} 核心失败."
         bin_name=$original_bin_name # 恢复原始的bin_name
         return 1
-      fi
-      
-      if [ -f "${box_pid}" ]; then
-        # 如果当前运行的就是 mihomo，则重启
-        if [ "$original_bin_name" = "mihomo" ]; then
-          restart_box "$target_bin_name"
-        else
-          log Debug "${target_bin_name} 已更新，但当前运行的是 ${original_bin_name}，无需重启。"
-        fi
-      else
-        log Debug "${core_to_process} 无需重启."
       fi
       ;;
     "sing-box")
@@ -627,25 +619,22 @@ xkernel() {
       log Info "正在解压 ${bin} 核心..."
       if ${unzip_command} -oq "${box_dir}/${file_kernel}.zip" "${bin}" -d "${bin_dir}/update"; then
         if mv "${bin_dir}/update/${bin}" "${bin_dir}/${core_to_process}"; then
-          if [ -f "${box_pid}" ]; then
-            restart_box "$core_to_process"
-          else
-            log Debug "${core_to_process} 无需重启."
-          fi
+          true # 成功
         else
           log Error "移动核心失败."
+          rm -rf "${bin_dir}/update"
+          return 1
         fi
       else
         log Error "解压 ${box_dir}/${file_kernel}.zip 失败."
+        rm -rf "${bin_dir}/update"
+        return 1
       fi
       rm -rf "${bin_dir}/update"
       ;;
     "hysteria")
-      if [ -f "${box_pid}" ]; then
-        restart_box "$core_to_process"
-      else
-        log Debug "${core_to_process} 无需重启."
-      fi
+      # Hysteria 是单个二进制文件，upfile 直接下载完成，这里无需额外操作
+      true
       ;;
     *)
       log Error "<${core_to_process}> 未知的二进制文件."
@@ -654,9 +643,24 @@ xkernel() {
       ;;
   esac
 
+  # 清理下载的临时文件
   find "${box_dir}" -maxdepth 1 -type f -name "${file_kernel}.*" -delete
-  chown ${box_user_group} "${bin_dir}/${core_to_process}"
-  chmod 0755 "${bin_dir}/${core_to_process}"
+
+  # 为最终的二进制文件设置正确的权限
+  chown ${box_user_group} "${bin_dir}/${target_bin_name}"
+  chmod 0755 "${bin_dir}/${target_bin_name}"
+  
+  # 如果更新的核心就是当前正在运行的核心，则重启服务
+  if [ -f "${box_pid}" ]; then
+    if [ "$original_bin_name" = "$target_bin_name" ]; then
+      log Info "检测到正在运行的核心已被更新，将自动重启服务..."
+      restart_box "$target_bin_name"
+    else
+      log Info "${target_bin_name} 已更新，但当前运行的是 ${original_bin_name}，无需重启。"
+    fi
+  else
+    log Info "服务未在运行，无需重启。"
+  fi
   
   bin_name=$original_bin_name
 }
