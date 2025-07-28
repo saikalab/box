@@ -362,6 +362,15 @@ upsubs() {
                     fi
                   fi
 
+                  if [ "${custom_proxy_groups_subs}" = "true" ]; then
+                    if ${yq} '.proxy-groups' "${update_file_name}" >/dev/null 2>&1; then
+                      ${yq} '.proxy-groups' "${update_file_name}" > "${mihomo_provide_proxy_groups}"
+                      ${yq} -i '{"proxy-groups": .}' "${mihomo_provide_proxy_groups}"
+                      ${yq} -i 'del(.proxy-groups)' "${mihomo_config}"
+                      cat "${mihomo_provide_proxy_groups}" >> "${mihomo_config}"
+                    fi
+                  fi
+
                   log Info "订阅成功"
                   log Info "更新订阅于 $(date +"%F %R")"
                   rm -f "${update_file_name}.bak" 2>/dev/null
