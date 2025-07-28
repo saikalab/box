@@ -362,6 +362,10 @@ upsubs() {
                   fi
 
                   if [ "${custom_rules_subs}" = "true" ]; then
+                    # remove rule-providers when use custom rules from subscription
+                    if ${yq} 'has("rule-providers")' "${mihomo_config}" | grep -q "true"; then
+                      ${yq} -i 'del(.rule-providers)' "${mihomo_config}"
+                    fi
                     if ${yq} '.rules' "${update_file_name}" >/dev/null 2>&1; then
                       mkdir -p "$(dirname "${mihomo_provide_rules}")"
                       ${yq} '.rules' "${update_file_name}" > "${mihomo_provide_rules}"
