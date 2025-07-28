@@ -1,0 +1,38 @@
+# 忽略 box 相关临时和日志文件
+/data/adb/box/run/*
+!/data/adb/box/run/.gitkeep
+/data/adb/box/*.log
+/data/adb/box/*.bak
+/data/adb/box/*.tmp
+/data/adb/box/*.pid
+
+# 忽略核心二进制和下载文件
+/data/adb/box/bin/*
+!/data/adb/box/bin/.gitkeep
+
+# 忽略配置备份和自动生成文件
+/data/adb/box/mihomo/proxy_provide/*
+!/data/adb/box/mihomo/proxy_provide/.gitkeep
+/data/adb/box/mihomo/provide/*
+!/data/adb/box/mihomo/provide/.gitkeep
+/data/adb/box/sing-box/*.db
+/data/adb/box/sing-box/*.bak
+/data/adb/box/sing-box/*.tmp
+
+# 忽略脚本日志
+box/scripts/*.log
+box/scripts/*.bak
+box/scripts/*.tmp
+
+# 忽略系统生成文件
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+.DS_Store
+
+# 忽略 IDE 配置
+.vscode/
+.cursor/
+.idea/
