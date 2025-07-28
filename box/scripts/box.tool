@@ -352,6 +352,15 @@ upsubs() {
                 if ${yq} '.proxies' "${update_file_name}" > "${mihomo_provide_config}" && \
                    ${yq} -i '{"proxies": .}' "${mihomo_provide_config}"; then
 
+                  if [ "${mihomo_replace_proxies}" = "true" ]; then
+                    if ${yq} 'has("proxy-providers")' "${mihomo_config}" | grep -q "true"; then
+                      ${yq} -i 'del(.proxy-providers)' "${mihomo_config}"
+                    fi
+                    # remove old proxies before appending proxies from subscription
+                    ${yq} -i 'del(.proxies)' "${mihomo_config}"
+                    cat "${mihomo_provide_config}" >> "${mihomo_config}"
+                  fi
+
                   if [ "${custom_rules_subs}" = "true" ]; then
                     if ${yq} '.rules' "${update_file_name}" >/dev/null 2>&1; then
                       mkdir -p "$(dirname "${mihomo_provide_rules}")"
