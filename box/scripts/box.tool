@@ -361,6 +361,15 @@ upsubs() {
                     cat "${mihomo_provide_config}" >> "${mihomo_config}"
                   fi
 
+                  if [ "${custom_proxy_groups_subs}" = "true" ]; then
+                    if ${yq} '.proxy-groups' "${update_file_name}" >/dev/null 2>&1; then
+                      ${yq} '.proxy-groups' "${update_file_name}" > "${mihomo_provide_proxy_groups}"
+                      ${yq} -i '{"proxy-groups": .}' "${mihomo_provide_proxy_groups}"
+                      ${yq} -i 'del(.proxy-groups)' "${mihomo_config}"
+                      cat "${mihomo_provide_proxy_groups}" >> "${mihomo_config}"
+                    fi
+                  fi
+
                   if [ "${custom_rules_subs}" = "true" ]; then
                     # remove rule-providers when use custom rules from subscription
                     if ${yq} 'has("rule-providers")' "${mihomo_config}" | grep -q "true"; then
@@ -372,15 +381,6 @@ upsubs() {
                       ${yq} -i '{"rules": .}' "${mihomo_provide_rules}"
                       ${yq} -i 'del(.rules)' "${mihomo_config}"
                       cat "${mihomo_provide_rules}" >> "${mihomo_config}"
-                    fi
-                  fi
-
-                  if [ "${custom_proxy_groups_subs}" = "true" ]; then
-                    if ${yq} '.proxy-groups' "${update_file_name}" >/dev/null 2>&1; then
-                      ${yq} '.proxy-groups' "${update_file_name}" > "${mihomo_provide_proxy_groups}"
-                      ${yq} -i '{"proxy-groups": .}' "${mihomo_provide_proxy_groups}"
-                      ${yq} -i 'del(.proxy-groups)' "${mihomo_config}"
-                      cat "${mihomo_provide_proxy_groups}" >> "${mihomo_config}"
                     fi
                   fi
 
